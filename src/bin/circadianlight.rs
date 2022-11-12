@@ -13,6 +13,13 @@ use chrono::{DateTime, FixedOffset, Local};
 use circadianlight::{gamma_function, timelike_to_hours, Config};
 use structopt::StructOpt;
 
+fn main() {
+    if let Err(error) = Program::from_args().run() {
+        eprintln!("{}", error);
+        exit(-1);
+    }
+}
+
 #[derive(Debug, Clone, StructOpt)]
 #[structopt(version = "0.1")]
 struct Program {
@@ -67,7 +74,10 @@ impl DaemonSubCommand {
         )?;
 
         while !terminate.load(Relaxed) {
-            apply(None, self.monitors.as_ref())?;
+            match &self.monitors {
+                Some(monitors) => apply(monitors, None)?,
+                None => apply(list_monitors()?, None)?,
+            }
             thread::sleep(Duration::from_secs(self.sleep_seconds));
         }
 
@@ -103,7 +113,11 @@ struct ApplySubCommand {
 
 impl ApplySubCommand {
     pub fn run(self) -> io::Result<()> {
-        apply(self.time, self.monitors.as_ref())
+        match self.monitors {
+            Some(monitors) => apply(monitors, self.time)?,
+            None => apply(list_monitors()?, self.time)?,
+        }
+        Ok(())
     }
 }
 
@@ -123,56 +137,35 @@ fn format_gamma(time: Option<DateTime<FixedOffset>>) -> String {
     format!("{:.3}:{:.3}:{:.3}", gamma[0], gamma[1], gamma[2])
 }
 
-fn apply(
-    time: Option<DateTime<FixedOffset>>,
-    monitors: Option<&Vec<String>>,
-) -> io::Result<()>
-where
-{
-    let mut command = match monitors {
-        Some(monitors) => {
-            apply_command(time, monitors.iter().map(String::as_ref))
-        },
-        None => {
-            let output = Command::new("xrandr")
-                .arg("--listmonitors")
-                .stdout(Stdio::piped())
-                .stderr(Stdio::inherit())
-                .output()?;
-            apply_command(
-                time,
-                String::from_utf8_lossy(&output.stdout)
-                    .lines()
-                    .skip(1)
-                    .filter_map(|line| line.rsplit_once(' '))
-                    .map(|(_, monitor)| monitor),
-            )
-        },
-    };
-
-    command.output()?;
-    Ok(())
+fn list_monitors() -> io::Result<Vec<String>> {
+    let output = Command::new("xrandr")
+        .arg("--listmonitors")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .output()?;
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .skip(1)
+        .filter_map(|line| line.rsplit_once(' '))
+        .map(|(_, monitor)| monitor.to_owned())
+        .collect())
 }
 
-fn apply_command<'monitor, M>(
-    time: Option<DateTime<FixedOffset>>,
-    monitors: M,
-) -> Command
+fn apply<M>(monitors: M, time: Option<DateTime<FixedOffset>>) -> io::Result<()>
 where
-    M: IntoIterator<Item = &'monitor str>,
+    M: IntoIterator,
+    M::Item: AsRef<str>,
 {
     let gamma = format_gamma(time);
     let mut command = Command::new("xrandr");
     command.stderr(Stdio::inherit());
     for monitor in monitors {
-        command.arg("--output").arg(monitor).arg("--gamma").arg(&gamma);
+        command
+            .arg("--output")
+            .arg(monitor.as_ref())
+            .arg("--gamma")
+            .arg(&gamma);
     }
-    command
-}
-
-fn main() {
-    if let Err(error) = Program::from_args().run() {
-        eprintln!("{}", error);
-        exit(-1);
-    }
+    command.output()?;
+    Ok(())
 }
