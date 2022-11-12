@@ -3,7 +3,7 @@ RUST_FILES = $(shell find src -type f -name '*.rs')
 USER_BIN_DIR = "$(HOME)/.local/bin"
 USER_SYSTEMD_DIR = "$(HOME)/.config/systemd/user"
 
-build-release: Cargo.toml Cargo.lock $(RUST_FILES)
+build-release: Cargo.toml $(RUST_FILES)
 	cargo build --release
 
 install: build-release circadianlight.service
