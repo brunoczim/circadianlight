@@ -6,7 +6,7 @@ USER_SYSTEMD_DIR = ~/.config/systemd/user
 build-release: Cargo.toml Cargo.lock $(RUST_FILES)
 	cargo build --release
 
-install: build-release circadianlight-user.service
+install: build-release circadianlight.service
 	@ set -e
 	mkdir -p ~/.local/bin
 	cp ./target/release/circadianlight $(USER_BIN_DIR)/circadianlight
