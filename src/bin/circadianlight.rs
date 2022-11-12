@@ -10,7 +10,11 @@ use std::{
 };
 
 use chrono::{DateTime, FixedOffset, Local};
-use circadianlight::{gamma_function, timelike_to_hours, Config};
+use circadianlight::{
+    channel::gamma_function,
+    config::Config,
+    hour::timelike_to_hours,
+};
 use structopt::StructOpt;
 
 fn main() {
