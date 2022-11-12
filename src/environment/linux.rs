@@ -3,6 +3,8 @@ use std::{
     process::{Command, Stdio},
 };
 
+use crate::channel::{BLUE_CHANNEL, GREEN_CHANNEL, RED_CHANNEL};
+
 use super::GraphicalEnv;
 
 #[derive(Debug, Clone)]
@@ -35,8 +37,11 @@ impl GraphicalEnv for XorgEnv {
             .collect())
     }
 
-    fn format_gamma(&self, gamma: [f64; 3]) -> String {
-        format!("{:.3}:{:.3}{:.3}", gamma[0], gamma[1], gamma[2])
+    fn format_gamma(&self, gamma: [f64; 3]) -> io::Result<String> {
+        Ok(format!(
+            "{:.3}:{:.3}:{:.3}",
+            gamma[RED_CHANNEL], gamma[GREEN_CHANNEL], gamma[BLUE_CHANNEL]
+        ))
     }
 
     fn apply_gamma<I>(&self, gamma: [f64; 3], monitors: I) -> io::Result<()>
@@ -44,7 +49,7 @@ impl GraphicalEnv for XorgEnv {
         I: IntoIterator,
         I::Item: AsRef<str>,
     {
-        let formatted_gamma = self.format_gamma(gamma);
+        let formatted_gamma = self.format_gamma(gamma)?;
         let mut command = Command::new("xrandr");
         command.stderr(Stdio::inherit());
         for monitor in monitors {

@@ -1,11 +1,23 @@
+use core::fmt;
+use std::{error::Error, io};
+
 mod linux;
 
-use std::io;
+#[derive(Debug, Clone)]
+struct NoSupportedGraphicalEnv;
+
+impl fmt::Display for NoSupportedGraphicalEnv {
+    fn fmt(&self, fmtr: &mut fmt::Formatter) -> fmt::Result {
+        fmtr.pad("your platform and/or environment is not supported")
+    }
+}
+
+impl Error for NoSupportedGraphicalEnv {}
 
 pub trait GraphicalEnv {
     fn list_monitors(&self) -> io::Result<Vec<String>>;
 
-    fn format_gamma(&self, gamma: [f64; 3]) -> String;
+    fn format_gamma(&self, gamma: [f64; 3]) -> io::Result<String>;
 
     fn apply_gamma<I>(&self, gamma: [f64; 3], monitors: I) -> io::Result<()>
     where
@@ -21,7 +33,7 @@ where
         (**self).list_monitors()
     }
 
-    fn format_gamma(&self, gamma: [f64; 3]) -> String {
+    fn format_gamma(&self, gamma: [f64; 3]) -> io::Result<String> {
         (**self).format_gamma(gamma)
     }
 
@@ -34,7 +46,7 @@ where
     }
 }
 
-pub trait GraphicalEnvContext {
+pub trait GraphicalEnvContext: Sized {
     type Output;
 
     fn with_graphical_env<G>(
@@ -44,10 +56,12 @@ pub trait GraphicalEnvContext {
     where
         G: GraphicalEnv;
 
-    fn without_graphical_env(self) -> io::Result<Self::Output>;
+    fn without_graphical_env(self) -> io::Result<Self::Output> {
+        Err(io::Error::new(io::ErrorKind::Unsupported, NoSupportedGraphicalEnv))
+    }
 }
 
-pub fn with_os_graphical_env<C, G>(context: C) -> io::Result<C::Output>
+pub fn with_os_graphical_env<C>(context: C) -> io::Result<C::Output>
 where
     C: GraphicalEnvContext,
 {

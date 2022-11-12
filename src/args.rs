@@ -1,18 +1,14 @@
-use std::{
-    io,
-    process::{Command, Stdio},
-    sync::{
-        atomic::{AtomicBool, Ordering::Relaxed},
-        Arc,
-    },
-    thread,
-    time::Duration,
-};
+use std::{io, thread, time::Duration};
 
 use chrono::{DateTime, FixedOffset, Local};
 use structopt::StructOpt;
 
-use crate::{channel::gamma_function, config::Config, hour::timelike_to_hours};
+use crate::{
+    channel::{gamma_function, BLUE_CHANNEL, GREEN_CHANNEL, RED_CHANNEL},
+    config::Config,
+    environment::{GraphicalEnv, GraphicalEnvContext},
+    hour::timelike_to_hours,
+};
 
 #[derive(Debug, Clone, StructOpt)]
 #[structopt(version = "0.1")]
@@ -25,9 +21,20 @@ impl Program {
     pub fn parse() -> Self {
         Self::from_args()
     }
+}
 
-    pub fn run(self) -> io::Result<()> {
-        self.subcommand.run()
+impl GraphicalEnvContext for Program {
+    type Output = ();
+
+    fn with_graphical_env<G>(self, graphical_env: G) -> io::Result<Self::Output>
+    where
+        G: GraphicalEnv,
+    {
+        self.subcommand.with_graphical_env(graphical_env)
+    }
+
+    fn without_graphical_env(self) -> io::Result<Self::Output> {
+        self.subcommand.without_graphical_env()
     }
 }
 
@@ -38,12 +45,31 @@ pub enum SubCommand {
     Apply(ApplySubCommand),
 }
 
-impl SubCommand {
-    pub fn run(self) -> io::Result<()> {
+impl GraphicalEnvContext for SubCommand {
+    type Output = ();
+
+    fn with_graphical_env<G>(self, graphical_env: G) -> io::Result<Self::Output>
+    where
+        G: GraphicalEnv,
+    {
         match self {
-            Self::Daemon(subcommand) => subcommand.run(),
-            Self::Print(subcommand) => subcommand.run(),
-            Self::Apply(subcommand) => subcommand.run(),
+            Self::Daemon(subcommand) => {
+                subcommand.with_graphical_env(graphical_env)
+            },
+            Self::Print(subcommand) => {
+                subcommand.with_graphical_env(graphical_env)
+            },
+            Self::Apply(subcommand) => {
+                subcommand.with_graphical_env(graphical_env)
+            },
+        }
+    }
+
+    fn without_graphical_env(self) -> io::Result<Self::Output> {
+        match self {
+            Self::Daemon(subcommand) => subcommand.without_graphical_env(),
+            Self::Print(subcommand) => subcommand.without_graphical_env(),
+            Self::Apply(subcommand) => subcommand.without_graphical_env(),
         }
     }
 }
@@ -59,27 +85,26 @@ pub struct DaemonSubCommand {
     monitors: Option<Vec<String>>,
 }
 
-impl DaemonSubCommand {
-    pub fn run(self) -> io::Result<()> {
-        let terminate = Arc::new(AtomicBool::new(false));
-        signal_hook::flag::register(
-            signal_hook::consts::SIGINT,
-            terminate.clone(),
-        )?;
-        signal_hook::flag::register(
-            signal_hook::consts::SIGTERM,
-            terminate.clone(),
-        )?;
+impl GraphicalEnvContext for DaemonSubCommand {
+    type Output = ();
 
-        while !terminate.load(Relaxed) {
+    fn with_graphical_env<G>(self, graphical_env: G) -> io::Result<Self::Output>
+    where
+        G: GraphicalEnv,
+    {
+        loop {
+            let gamma = channels_from_time(None);
             match &self.monitors {
-                Some(monitors) => apply(monitors, None)?,
-                None => apply(list_monitors()?, None)?,
+                Some(monitors) => {
+                    graphical_env.apply_gamma(gamma, monitors)?;
+                },
+                None => {
+                    let monitors = graphical_env.list_monitors()?;
+                    graphical_env.apply_gamma(gamma, monitors)?;
+                },
             }
             thread::sleep(Duration::from_secs(self.sleep_seconds));
         }
-
-        Ok(())
     }
 }
 
@@ -91,9 +116,24 @@ pub struct PrintSubCommand {
     time: Option<DateTime<FixedOffset>>,
 }
 
-impl PrintSubCommand {
-    pub fn run(self) -> io::Result<()> {
-        println!("{}", format_gamma(self.time));
+impl GraphicalEnvContext for PrintSubCommand {
+    type Output = ();
+
+    fn with_graphical_env<G>(self, graphical_env: G) -> io::Result<Self::Output>
+    where
+        G: GraphicalEnv,
+    {
+        let gamma = channels_from_time(self.time);
+        println!("{}", graphical_env.format_gamma(gamma)?);
+        Ok(())
+    }
+
+    fn without_graphical_env(self) -> io::Result<Self::Output> {
+        let gamma = channels_from_time(self.time);
+        println!(
+            "red={:.3} green={:.3} blue={:.3}",
+            gamma[RED_CHANNEL], gamma[GREEN_CHANNEL], gamma[BLUE_CHANNEL],
+        );
         Ok(())
     }
 }
@@ -109,11 +149,22 @@ pub struct ApplySubCommand {
     monitors: Option<Vec<String>>,
 }
 
-impl ApplySubCommand {
-    pub fn run(self) -> io::Result<()> {
+impl GraphicalEnvContext for ApplySubCommand {
+    type Output = ();
+
+    fn with_graphical_env<G>(self, graphical_env: G) -> io::Result<Self::Output>
+    where
+        G: GraphicalEnv,
+    {
+        let gamma = channels_from_time(self.time);
         match self.monitors {
-            Some(monitors) => apply(monitors, self.time)?,
-            None => apply(list_monitors()?, self.time)?,
+            Some(monitors) => {
+                graphical_env.apply_gamma(gamma, monitors)?;
+            },
+            None => {
+                let monitors = graphical_env.list_monitors()?;
+                graphical_env.apply_gamma(gamma, monitors)?;
+            },
         }
         Ok(())
     }
@@ -125,45 +176,11 @@ fn parse_time_arg(
     DateTime::parse_from_str(arg, "%H:%M")
 }
 
-fn format_gamma(time: Option<DateTime<FixedOffset>>) -> String {
+pub fn channels_from_time(time: Option<DateTime<FixedOffset>>) -> [f64; 3] {
     let hours = match time {
         Some(offset) => timelike_to_hours(&offset),
         None => timelike_to_hours(&Local::now()),
     };
     let config = Config::default();
-    let gamma = gamma_function(config)(hours);
-    format!("{:.3}:{:.3}:{:.3}", gamma[0], gamma[1], gamma[2])
-}
-
-fn list_monitors() -> io::Result<Vec<String>> {
-    let output = Command::new("xrandr")
-        .arg("--listmonitors")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
-        .output()?;
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .skip(1)
-        .filter_map(|line| line.rsplit_once(' '))
-        .map(|(_, monitor)| monitor.to_owned())
-        .collect())
-}
-
-fn apply<M>(monitors: M, time: Option<DateTime<FixedOffset>>) -> io::Result<()>
-where
-    M: IntoIterator,
-    M::Item: AsRef<str>,
-{
-    let gamma = format_gamma(time);
-    let mut command = Command::new("xrandr");
-    command.stderr(Stdio::inherit());
-    for monitor in monitors {
-        command
-            .arg("--output")
-            .arg(monitor.as_ref())
-            .arg("--gamma")
-            .arg(&gamma);
-    }
-    command.output()?;
-    Ok(())
+    gamma_function(config)(hours)
 }
