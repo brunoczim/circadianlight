@@ -3,9 +3,9 @@ use crate::{
     hour::DayPhase,
 };
 
-pub const RED_CHANNEL: usize = 0;
-pub const GREEN_CHANNEL: usize = 1;
-pub const BLUE_CHANNEL: usize = 2;
+pub const RED: usize = 0;
+pub const GREEN: usize = 1;
+pub const BLUE: usize = 2;
 
 pub fn map_channel_vector<F, T, U>(input: [T; 3], mut mapper: F) -> [U; 3]
 where

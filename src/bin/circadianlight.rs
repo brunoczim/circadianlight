@@ -1,6 +1,6 @@
 use std::process;
 
-use circadianlight::{args::Program, environment::with_os_graphical_env};
+use circadianlight::{cli::Program, environment::with_os_graphical_env};
 
 fn main() {
     if let Err(error) = with_os_graphical_env(Program::parse()) {

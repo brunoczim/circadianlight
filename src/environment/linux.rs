@@ -3,7 +3,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::channel::{BLUE_CHANNEL, GREEN_CHANNEL, RED_CHANNEL};
+use crate::channel;
 
 use super::GraphicalEnv;
 
@@ -38,10 +38,7 @@ impl GraphicalEnv for XorgEnv {
     }
 
     fn format_gamma(&self, gamma: [f64; 3]) -> io::Result<String> {
-        Ok(format!(
-            "{:.3}:{:.3}:{:.3}",
-            gamma[RED_CHANNEL], gamma[GREEN_CHANNEL], gamma[BLUE_CHANNEL]
-        ))
+        Ok(format!("{:.3}:{:.3}:{:.3}", gamma[channel:: RED], gamma[channel::GREEN], gamma[channel::BLUE]))
     }
 
     fn apply_gamma<I>(&self, gamma: [f64; 3], monitors: I) -> io::Result<()>

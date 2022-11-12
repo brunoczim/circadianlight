@@ -4,7 +4,7 @@ use chrono::{DateTime, FixedOffset, Local};
 use structopt::StructOpt;
 
 use crate::{
-    channel::{gamma_function, BLUE_CHANNEL, GREEN_CHANNEL, RED_CHANNEL},
+    channel::{gamma_function, self},
     config::Config,
     environment::{GraphicalEnv, GraphicalEnvContext},
     hour::timelike_to_hours,
@@ -132,7 +132,7 @@ impl GraphicalEnvContext for PrintSubCommand {
         let gamma = channels_from_time(self.time);
         println!(
             "red={:.3} green={:.3} blue={:.3}",
-            gamma[RED_CHANNEL], gamma[GREEN_CHANNEL], gamma[BLUE_CHANNEL],
+            gamma[channel::RED], gamma[channel::GREEN], gamma[channel::BLUE],
         );
         Ok(())
     }
