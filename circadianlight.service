@@ -1,0 +1,8 @@
+[Unit]
+Description=Adapt light gamma spectrum according to day hour
+
+[Service]
+ExecStart=$HOME/.local/bin/circadianlight
+
+[Install]
+WantedBy=graphical.target
