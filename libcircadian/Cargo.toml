@@ -1,5 +1,5 @@
 [package]
-name = "circadianlight"
+name = "libcircadian"
 version = "0.1.0"
 edition = "2021"
 
