@@ -1,3 +1,5 @@
+#![doc = include_str!("../../README.md")]
+
 use std::process;
 
 use circadianlight::{cli::Program, environment::with_os_graphical_env};

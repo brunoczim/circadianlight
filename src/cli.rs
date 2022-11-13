@@ -1,3 +1,5 @@
+//! CLI (Command-Line Interface) utilites.
+
 use std::{io, thread, time::Duration};
 
 use chrono::{Local, NaiveTime};
@@ -16,42 +18,52 @@ use crate::{
     hour::timelike_to_hours,
 };
 
+/// Common args for configuring the gamma funcion.
 #[derive(Debug, Clone, StructOpt)]
 pub struct ConfigArgs {
+    /// Minimum red channel value, in the interval `[0,1]`.
     #[structopt(long = "--min-red")]
     #[structopt(short = "-r")]
     #[structopt(default_value = "1.0")]
     min_red: f64,
+    /// Maximum red channel value, in the interval `[0,1]`.
     #[structopt(long = "--max-red")]
     #[structopt(short = "-R")]
     #[structopt(default_value = "1.0")]
     max_red: f64,
+    /// Minimum green channel value, in the interval `[0,1]`.
     #[structopt(long = "--min-green")]
     #[structopt(short = "-g")]
     #[structopt(default_value = "0.65")]
     min_green: f64,
+    /// Maximum green channel value, in the interval `[0,1]`.
     #[structopt(long = "--max-green")]
     #[structopt(short = "-G")]
     #[structopt(default_value = "1.0")]
     max_green: f64,
+    /// Minimum blue channel value, in the interval `[0,1]`.
     #[structopt(long = "--min-blue")]
     #[structopt(short = "-b")]
     #[structopt(default_value = "0.45")]
     min_blue: f64,
+    /// Maximum blue channel value, in the interval `[0,1]`.
     #[structopt(long = "--max-blue")]
     #[structopt(short = "-B")]
     #[structopt(default_value = "1.0")]
     max_blue: f64,
+    /// Starting hour of the day phase.
     #[structopt(long = "--day-start")]
     #[structopt(short = "-d")]
     #[structopt(default_value = "05:00")]
     #[structopt(parse(try_from_str = parse_time_arg))]
     day_start: NaiveTime,
+    /// Starting hour of the dusk phase.
     #[structopt(long = "--dusk-start")]
     #[structopt(short = "-D")]
     #[structopt(default_value = "17:00")]
     #[structopt(parse(try_from_str = parse_time_arg))]
     dusk_start: NaiveTime,
+    /// Starting hour of the night phase.
     #[structopt(long = "--night-start")]
     #[structopt(short = "-n")]
     #[structopt(default_value = "21:00")]
@@ -60,6 +72,7 @@ pub struct ConfigArgs {
 }
 
 impl ConfigArgs {
+    /// Creates an hour configuration from these args.
     pub fn create_hour_config(&self) -> Result<HourConfig, InvalidDayPhases> {
         HourConfig::new(
             timelike_to_hours(&self.day_start),
@@ -68,6 +81,7 @@ impl ConfigArgs {
         )
     }
 
+    /// Creates channels' configurations from these args.
     pub fn create_channels_config(
         &self,
     ) -> Result<[ChannelConfig; 3], InvalidChannelBounds> {
@@ -78,6 +92,7 @@ impl ConfigArgs {
         ])
     }
 
+    /// Creates whole configuration from these args.
     pub fn create_config(&self) -> io::Result<Config> {
         let hours = self.create_hour_config().map_err(|error| {
             io::Error::new(io::ErrorKind::InvalidInput, error)
@@ -89,6 +104,12 @@ impl ConfigArgs {
     }
 }
 
+/// Circadian Light is a program controls the color spectrum of your screen
+/// according to the current day time in order to improve the quality of your
+/// sleep.
+/// The more night it becomes, the more red your computer screen will emit
+/// (actually, it is more correct to say that it will emit less green and blue
+/// light).
 #[derive(Debug, Clone, StructOpt)]
 #[structopt(version = "0.1")]
 pub struct Program {
@@ -111,10 +132,16 @@ impl GraphicalEnvContext for Program {
     }
 }
 
+/// Subcommand required to run circadianlight.
 #[derive(Debug, Clone, StructOpt)]
 pub enum SubCommand {
+    /// Run it as a daemon from minute to minute or in the desired interval.
     Daemon(DaemonSubCommand),
+    /// Just prints the color spectrum for the current hour (or the given
+    /// hour).
     Print(PrintSubCommand),
+    /// Applies once the color spectrum to the screen according to current hour
+    /// (or the given hour).
     Apply(ApplySubCommand),
 }
 
@@ -147,15 +174,21 @@ impl GraphicalEnvContext for SubCommand {
     }
 }
 
+/// Run it as a daemon from minute to minute or in the desired interval.
 #[derive(Debug, Clone, StructOpt)]
 pub struct DaemonSubCommand {
+    /// Seconds to wait beetween every update to screen colors.
     #[structopt(long = "--sleep-seconds")]
     #[structopt(short = "-s")]
     #[structopt(default_value = "60")]
     sleep_seconds: u64,
+    /// List of currently used monitors. If not given, it will be obtained from
+    /// your graphical environment, and all of currently used monitors will
+    /// be targetted.
     #[structopt(long = "--monitors")]
     #[structopt(short = "-m")]
     monitors: Option<Vec<String>>,
+    /// Arguments for configuration of the gamma function.
     #[structopt(flatten)]
     config_args: ConfigArgs,
 }
@@ -184,12 +217,17 @@ impl GraphicalEnvContext for DaemonSubCommand {
     }
 }
 
+/// Just prints the color spectrum for the current hour (or the given
+/// hour).
 #[derive(Debug, Clone, StructOpt)]
 pub struct PrintSubCommand {
+    /// The time in format `H:M` from which the colors will be computed. If not
+    /// given, the current hour and minute is given.
     #[structopt(long = "--time")]
     #[structopt(short = "-t")]
     #[structopt(parse(try_from_str = parse_time_arg))]
     time: Option<NaiveTime>,
+    /// Arguments for configuration of the gamma function.
     #[structopt(flatten)]
     config_args: ConfigArgs,
 }
@@ -220,15 +258,23 @@ impl GraphicalEnvContext for PrintSubCommand {
     }
 }
 
+/// Applies once the color spectrum to the screen according to current hour
+/// (or the given hour).
 #[derive(Debug, Clone, StructOpt)]
 pub struct ApplySubCommand {
+    /// The time in format `H:M` from which the colors will be computed. If not
+    /// given, the current hour and minute is given.
     #[structopt(long = "--time")]
     #[structopt(short = "-t")]
     #[structopt(parse(try_from_str = parse_time_arg))]
     time: Option<NaiveTime>,
+    /// List of currently used monitors. If not given, it will be obtained from
+    /// your graphical environment, and all of currently used monitors will
+    /// be targetted.
     #[structopt(long = "--monitors")]
     #[structopt(short = "-m")]
     monitors: Option<Vec<String>>,
+    /// Arguments for configuration of the gamma function.
     #[structopt(flatten)]
     config_args: ConfigArgs,
 }

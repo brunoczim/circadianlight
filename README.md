@@ -3,9 +3,9 @@
 ## What It Is
 
 Circadian Light is a program, currently only working on Linux with X, that
-controls the color spectrum of your screen according to the current day hour
+controls the color spectrum of your screen according to the current day time
 in order to improve the quality of your sleep.
-How does it work? The more night it becomes, the more red your computer screen
+The more night it becomes, the more red your computer screen
 will emit (actually, it is more correct to say that it will emit less green and
 blue light).
 

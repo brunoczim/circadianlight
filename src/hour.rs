@@ -1,6 +1,10 @@
+//! Utilities related to day phases.
+
 use crate::config::HourConfig;
 use chrono::Timelike;
 
+/// Converts a `chrono` time-like object into a compressed `24h` day hour in the
+/// interval `[0,1)`.
 pub fn timelike_to_hours<T>(timelike: &T) -> f64
 where
     T: Timelike + ?Sized,
@@ -11,14 +15,22 @@ where
     nanoseconds / (60.0 * 60.0 * 24.0)
 }
 
+/// A day phase.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum DayPhase {
+    /// Any part of the bright sun day phase.
     Day,
+    /// A part of the transition from day to night, with an indication of where
+    /// this transition is, given `0` for just after day, `1` for starting
+    /// night (i.e. in the interval `[0, 1)`.
     Dusk(f64),
+    /// Any part of the night phase.
     Night,
 }
 
 impl DayPhase {
+    /// Computes the day phase given a day phase hour configuration and the
+    /// current hour compressed in the interval `[0,1)` (where `1 = 24h`).
     pub fn from_current_hour(
         hour_config: HourConfig,
         current_hour: f64,
@@ -27,11 +39,11 @@ impl DayPhase {
             && hour_config.dusk_start() <= hour_config.night_start()
         {
             if current_hour >= hour_config.day_start()
-                && current_hour <= hour_config.dusk_start()
+                && current_hour < hour_config.dusk_start()
             {
                 Self::Day
             } else if current_hour >= hour_config.dusk_start()
-                && current_hour <= hour_config.night_start()
+                && current_hour < hour_config.night_start()
             {
                 Self::Dusk(
                     (current_hour - hour_config.dusk_start())
@@ -45,7 +57,7 @@ impl DayPhase {
             && hour_config.day_start() <= hour_config.dusk_start()
         {
             if current_hour >= hour_config.day_start()
-                && current_hour <= hour_config.dusk_start()
+                && current_hour < hour_config.dusk_start()
             {
                 Self::Day
             } else if current_hour >= hour_config.dusk_start() {
@@ -54,7 +66,7 @@ impl DayPhase {
                         / (1.0 + hour_config.night_start()
                             - hour_config.dusk_start()),
                 )
-            } else if current_hour <= hour_config.night_start() {
+            } else if current_hour < hour_config.night_start() {
                 Self::Dusk(
                     (1.0 + current_hour - hour_config.dusk_start())
                         / (1.0 + hour_config.night_start()
@@ -67,11 +79,11 @@ impl DayPhase {
             && hour_config.night_start() <= hour_config.day_start()
         {
             if current_hour >= hour_config.day_start()
-                || current_hour <= hour_config.dusk_start()
+                || current_hour < hour_config.dusk_start()
             {
                 Self::Day
             } else if current_hour >= hour_config.dusk_start()
-                && current_hour <= hour_config.night_start()
+                && current_hour < hour_config.night_start()
             {
                 Self::Dusk(
                     (current_hour - hour_config.dusk_start())

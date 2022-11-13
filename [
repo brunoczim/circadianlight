@@ -102,20 +102,15 @@ impl HourConfig {
         self.day_start
     }
 
-    /// Starting hour of the dusk phase, compressed `24h` into the interval
-    /// `[0,1)`.
     pub fn dusk_start(self) -> f64 {
         self.dusk_start
     }
 
-    /// Starting hour of the night phase, compressed `24h` into the interval
-    /// `[0,1)`.
     pub fn night_start(self) -> f64 {
         self.night_start
     }
 }
 
-/// Configuration of a color channel.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct ChannelConfig {
     min: f64,
@@ -129,9 +124,6 @@ impl Default for ChannelConfig {
 }
 
 impl ChannelConfig {
-    /// Creates the configuration of a color channel, given its minimum and
-    /// maximum value in the interval `[0,1]`.
-    /// Note that `minimum <= maximum` is a restriction that must be respected.
     pub fn new(
         min: f64,
         max: f64,
@@ -143,23 +135,18 @@ impl ChannelConfig {
         }
     }
 
-    /// Minimum value of a color channel in the interval `[0,1]`.
     pub fn min(self) -> f64 {
         self.min
     }
 
-    /// Maximum value of a color channel in the interval `[0,1]`.
     pub fn max(self) -> f64 {
         self.max
     }
 }
 
-/// General configuration of the application.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Config {
-    /// Configuration of day phases.
     pub hours: HourConfig,
-    /// Configuration of color channels, in the order: red, green, blue.
     pub channels: [ChannelConfig; 3],
 }
 
