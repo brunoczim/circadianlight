@@ -2,7 +2,7 @@
 Description=Circadian Light
 
 [Service]
-ExecStart=%h/.local/bin/circadianlight daemon
+ExecStart=%h/.cargo/bin/circadianlight daemon
 
 [Install]
 WantedBy=graphical.target
