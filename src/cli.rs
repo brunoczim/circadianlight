@@ -4,11 +4,95 @@ use chrono::{DateTime, FixedOffset, Local};
 use structopt::StructOpt;
 
 use crate::{
-    channel::{gamma_function, self},
-    config::Config,
+    channel::{self, gamma_function},
+    config::{
+        ChannelConfig,
+        Config,
+        HourConfig,
+        InvalidChannelBounds,
+        InvalidDayPhases,
+    },
     environment::{GraphicalEnv, GraphicalEnvContext},
     hour::timelike_to_hours,
 };
+
+#[derive(Debug, Clone, StructOpt)]
+pub struct ConfigArgs {
+    #[structopt(long = "--min-red")]
+    #[structopt(short = "-r")]
+    #[structopt(default_value = "1.0")]
+    min_red: f64,
+    #[structopt(long = "--max-red")]
+    #[structopt(short = "-R")]
+    #[structopt(default_value = "1.0")]
+    max_red: f64,
+    #[structopt(long = "--min-green")]
+    #[structopt(short = "-g")]
+    #[structopt(default_value = "0.7")]
+    min_green: f64,
+    #[structopt(long = "--max-green")]
+    #[structopt(short = "-G")]
+    #[structopt(default_value = "1.0")]
+    max_green: f64,
+    #[structopt(long = "--min-blue")]
+    #[structopt(short = "-b")]
+    #[structopt(default_value = "0.5")]
+    min_blue: f64,
+    #[structopt(long = "--max-blue")]
+    #[structopt(short = "-B")]
+    #[structopt(default_value = "1.0")]
+    max_blue: f64,
+    #[structopt(long = "--day-start")]
+    #[structopt(short = "-d")]
+    #[structopt(default_value = "5:00")]
+    #[structopt(parse(try_from_str= parse_time_arg))]
+    day_start: DateTime<FixedOffset>,
+    #[structopt(long = "--dusk-start")]
+    #[structopt(short = "-D")]
+    #[structopt(default_value = "17:00")]
+    #[structopt(parse(try_from_str= parse_time_arg))]
+    dusk_start: DateTime<FixedOffset>,
+    #[structopt(long = "--night-start")]
+    #[structopt(short = "-n")]
+    #[structopt(default_value = "21:00")]
+    #[structopt(parse(try_from_str= parse_time_arg))]
+    night_start: DateTime<FixedOffset>,
+}
+
+impl ConfigArgs {
+    pub fn create_hour_config(&self) -> Result<HourConfig, InvalidDayPhases> {
+        HourConfig::default()
+            .with_day_start(timelike_to_hours(&self.day_start))?
+            .with_dusk_start(timelike_to_hours(&self.dusk_start))?
+            .with_night_start(timelike_to_hours(&self.night_start))
+    }
+
+    pub fn create_channels_config(
+        &self,
+    ) -> Result<[ChannelConfig; 3], InvalidChannelBounds> {
+        Ok([
+            ChannelConfig::default()
+                .with_min(self.min_red)?
+                .with_max(self.max_red)?,
+            ChannelConfig::default()
+                .with_min(self.min_green)?
+                .with_max(self.max_green)?,
+            ChannelConfig::default()
+                .with_min(self.min_blue)?
+                .with_max(self.max_blue)?,
+        ])
+    }
+
+    pub fn create_config(&self) -> io::Result<Config> {
+        let hours = self.create_hour_config().map_err(|error| {
+            io::Error::new(io::ErrorKind::InvalidInput, error)
+        })?;
+        let channels = self.create_channels_config().map_err(|error| {
+            io::Error::new(io::ErrorKind::InvalidInput, error)
+        })?;
+        Ok(Config { hours, channels })
+    }
+}
 
 #[derive(Debug, Clone, StructOpt)]
 #[structopt(version = "0.1")]
@@ -83,6 +167,8 @@ pub struct DaemonSubCommand {
     #[structopt(long = "--monitors")]
     #[structopt(short = "-m")]
     monitors: Option<Vec<String>>,
+    #[structopt(flatten)]
+    config_args: ConfigArgs,
 }
 
 impl GraphicalEnvContext for DaemonSubCommand {
@@ -92,8 +178,9 @@ impl GraphicalEnvContext for DaemonSubCommand {
     where
         G: GraphicalEnv,
     {
+        let config = self.config_args.create_config()?;
         loop {
-            let gamma = channels_from_time(None);
+            let gamma = channels_from_time(config, None);
             match &self.monitors {
                 Some(monitors) => {
                     graphical_env.apply_gamma(gamma, monitors)?;
@@ -114,6 +201,8 @@ pub struct PrintSubCommand {
     #[structopt(short = "-t")]
     #[structopt(parse(try_from_str = parse_time_arg))]
     time: Option<DateTime<FixedOffset>>,
+    #[structopt(flatten)]
+    config_args: ConfigArgs,
 }
 
 impl GraphicalEnvContext for PrintSubCommand {
@@ -123,16 +212,20 @@ impl GraphicalEnvContext for PrintSubCommand {
     where
         G: GraphicalEnv,
     {
-        let gamma = channels_from_time(self.time);
+        let config = self.config_args.create_config()?;
+        let gamma = channels_from_time(config, self.time);
         println!("{}", graphical_env.format_gamma(gamma)?);
         Ok(())
     }
 
     fn without_graphical_env(self) -> io::Result<Self::Output> {
-        let gamma = channels_from_time(self.time);
+        let config = self.config_args.create_config()?;
+        let gamma = channels_from_time(config, self.time);
         println!(
             "red={:.3} green={:.3} blue={:.3}",
-            gamma[channel::RED], gamma[channel::GREEN], gamma[channel::BLUE],
+            gamma[channel::RED],
+            gamma[channel::GREEN],
+            gamma[channel::BLUE],
         );
         Ok(())
     }
@@ -147,6 +240,8 @@ pub struct ApplySubCommand {
     #[structopt(long = "--monitors")]
     #[structopt(short = "-m")]
     monitors: Option<Vec<String>>,
+    #[structopt(flatten)]
+    config_args: ConfigArgs,
 }
 
 impl GraphicalEnvContext for ApplySubCommand {
@@ -156,7 +251,8 @@ impl GraphicalEnvContext for ApplySubCommand {
     where
         G: GraphicalEnv,
     {
-        let gamma = channels_from_time(self.time);
+        let config = self.config_args.create_config()?;
+        let gamma = channels_from_time(config, self.time);
         match self.monitors {
             Some(monitors) => {
                 graphical_env.apply_gamma(gamma, monitors)?;
@@ -176,11 +272,13 @@ fn parse_time_arg(
     DateTime::parse_from_str(arg, "%H:%M")
 }
 
-pub fn channels_from_time(time: Option<DateTime<FixedOffset>>) -> [f64; 3] {
+pub fn channels_from_time(
+    config: Config,
+    time: Option<DateTime<FixedOffset>>,
+) -> [f64; 3] {
     let hours = match time {
         Some(offset) => timelike_to_hours(&offset),
         None => timelike_to_hours(&Local::now()),
     };
-    let config = Config::default();
     gamma_function(config)(hours)
 }

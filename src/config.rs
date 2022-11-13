@@ -1,3 +1,45 @@
+use std::{error::Error, fmt};
+
+#[derive(Debug, Clone)]
+pub struct InvalidDayPhases {
+    pub day_start: f64,
+    pub dusk_start: f64,
+    pub night_start: f64,
+}
+
+impl fmt::Display for InvalidDayPhases {
+    fn fmt(&self, fmtr: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            fmtr,
+            "Invalid day phases sequence, expected a cycle of day -> dusk -> \
+             night -> day; on an interval [0.0, 1.0), given day start: {}, \
+             dusk start: {}, night start: {}",
+            self.day_start, self.dusk_start, self.night_start
+        )
+    }
+}
+
+impl Error for InvalidDayPhases {}
+
+#[derive(Debug, Clone)]
+pub struct InvalidChannelBounds {
+    pub min: f64,
+    pub max: f64,
+}
+
+impl fmt::Display for InvalidChannelBounds {
+    fn fmt(&self, fmtr: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            fmtr,
+            "Invalid color channel bounds, expected min <= max; on an \
+             interval [0.0, 1.0), given min: {}, max: {}",
+            self.min, self.max
+        )
+    }
+}
+
+impl Error for InvalidChannelBounds {}
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct HourConfig {
     day_start: f64,
@@ -28,52 +70,62 @@ impl HourConfig {
         self.night_start
     }
 
-    pub fn with_day_start(self, day_start: f64) -> Self {
-        assert!(
-            day_start <= self.dusk_start && self.dusk_start <= self.night_start
-                || self.night_start <= day_start
-                    && day_start <= self.dusk_start
-                || self.dusk_start <= self.night_start
-                    && self.night_start <= day_start,
-            "Given day start {} violates day phases order: day -> dusk {} -> \
-             night {}",
-            day_start,
-            self.dusk_start,
-            self.night_start
-        );
-        Self { day_start, ..self }
+    pub fn with_day_start(
+        self,
+        day_start: f64,
+    ) -> Result<Self, InvalidDayPhases> {
+        if day_start <= self.dusk_start && self.dusk_start <= self.night_start
+            || self.night_start <= day_start && day_start <= self.dusk_start
+            || self.dusk_start <= self.night_start
+                && self.night_start <= day_start
+        {
+            Ok(Self { day_start, ..self })
+        } else {
+            Err(InvalidDayPhases {
+                day_start,
+                dusk_start: self.dusk_start,
+                night_start: self.night_start,
+            })
+        }
     }
 
-    pub fn with_dusk_start(self, dusk_start: f64) -> Self {
-        assert!(
-            self.day_start <= dusk_start && dusk_start <= self.night_start
-                || self.night_start <= self.day_start
-                    && self.day_start <= dusk_start
-                || dusk_start <= self.night_start
-                    && self.night_start <= self.day_start,
-            "Given dusk start {} violates day phases order: day {} -> dusk  \
-             -> night {}",
-            dusk_start,
-            self.day_start,
-            self.night_start,
-        );
-        Self { dusk_start, ..self }
+    pub fn with_dusk_start(
+        self,
+        dusk_start: f64,
+    ) -> Result<HourConfig, InvalidDayPhases> {
+        if self.day_start <= dusk_start && dusk_start <= self.night_start
+            || self.night_start <= self.day_start
+                && self.day_start <= dusk_start
+            || dusk_start <= self.night_start
+                && self.night_start <= self.day_start
+        {
+            Ok(Self { dusk_start, ..self })
+        } else {
+            Err(InvalidDayPhases {
+                day_start: self.day_start,
+                dusk_start,
+                night_start: self.night_start,
+            })
+        }
     }
 
-    pub fn with_night_start(self, night_start: f64) -> Self {
-        assert!(
-            self.day_start <= self.dusk_start && self.dusk_start <= night_start
-                || night_start <= self.day_start
-                    && self.day_start <= self.dusk_start
-                || self.dusk_start <= night_start
-                    && night_start <= self.day_start,
-            "Given night start {} violates day phases order: day {} -> dusk \
-             {} -> night",
-            self.day_start,
-            self.dusk_start,
-            night_start
-        );
-        Self { night_start, ..self }
+    pub fn with_night_start(
+        self,
+        night_start: f64,
+    ) -> Result<HourConfig, InvalidDayPhases> {
+        if self.day_start <= self.dusk_start && self.dusk_start <= night_start
+            || night_start <= self.day_start
+                && self.day_start <= self.dusk_start
+            || self.dusk_start <= night_start && night_start <= self.day_start
+        {
+            Ok(Self { night_start, ..self })
+        } else {
+            Err(InvalidDayPhases {
+                day_start: self.day_start,
+                dusk_start: self.dusk_start,
+                night_start,
+            })
+        }
     }
 }
 
@@ -90,24 +142,26 @@ impl Default for ChannelConfig {
 }
 
 impl ChannelConfig {
-    pub fn with_min(self, min: f64) -> Self {
-        assert!(
-            min <= self.max,
-            "Minimum value {} for channel is bigger than maximum {}",
-            min,
-            self.max
-        );
-        Self { min, ..self }
+    pub fn with_min(
+        self,
+        min: f64,
+    ) -> Result<ChannelConfig, InvalidChannelBounds> {
+        if min <= self.max {
+            Ok(Self { min, ..self })
+        } else {
+            Err(InvalidChannelBounds { min, max: self.max })
+        }
     }
 
-    pub fn with_max(self, max: f64) -> Self {
-        assert!(
-            max >= self.min,
-            "Maximum value {} for channel is bigger than minimum {}",
-            max,
-            self.min
-        );
-        Self { max, ..self }
+    pub fn with_max(
+        self,
+        max: f64,
+    ) -> Result<ChannelConfig, InvalidChannelBounds> {
+        if self.min <= max {
+            Ok(Self { max, ..self })
+        } else {
+            Err(InvalidChannelBounds { min: self.min, max })
+        }
     }
 
     pub fn min(self) -> f64 {
