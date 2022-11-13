@@ -28,7 +28,9 @@ on Linux.
 
 The program can be configured, please run `circadianlight --help`.
 
-## How To Install/Uninstall It On Linux, Targeting X and Systemd
+## How To Install/Uninstall 
+
+### On Linux, With Systemd
 
 To install it on linux, targeting X and systemd, simply run:
 
@@ -40,4 +42,11 @@ To uninstall:
 
 ```sh
 make uninstall
+```
+
+### Other Platforms (Including Linux Without Systemd)
+
+This can be simply a cargo install:
+```sh
+cargo install --path .
 ```
