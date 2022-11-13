@@ -86,3 +86,64 @@ impl DayPhase {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::config::HourConfig;
+
+    use super::DayPhase;
+
+    const EPSILON: f64 = 0.01;
+
+    #[test]
+    fn day_phase_from_current_hour_is_day() {
+        assert_eq!(
+            DayPhase::from_current_hour(HourConfig::default(), 12.0 / 24.0),
+            DayPhase::Day,
+        );
+    }
+
+    #[test]
+    fn day_phase_from_current_hour_is_dusk() {
+        match DayPhase::from_current_hour(HourConfig::default(), 19.0 / 24.0) {
+            DayPhase::Dusk(scale) => {
+                assert!((scale - (19.0 - 17.0) / (21.0 - 17.0)).abs() < EPSILON)
+            },
+            value => panic!("Expected dusk, found {:?}", value),
+        }
+    }
+
+    #[test]
+    fn day_phase_from_current_hour_is_night() {
+        assert_eq!(
+            DayPhase::from_current_hour(HourConfig::default(), 23.0 / 24.0),
+            DayPhase::Night,
+        );
+        assert_eq!(
+            DayPhase::from_current_hour(HourConfig::default(), 1.0 / 24.0),
+            DayPhase::Night,
+        );
+    }
+
+    #[test]
+    fn chaotic_day_phae_order() {
+        let config =
+            HourConfig::new(10.0 / 24.0, 19.0 / 24.0, 1.0 / 24.0).unwrap();
+        assert_eq!(
+            DayPhase::from_current_hour(config, 1.1 / 24.0),
+            DayPhase::Night,
+        );
+        assert_eq!(
+            DayPhase::from_current_hour(config, 5.0 / 24.0),
+            DayPhase::Night,
+        );
+        assert_eq!(
+            DayPhase::from_current_hour(config, 11.0 / 24.0),
+            DayPhase::Day,
+        );
+        assert!(matches!(
+            DayPhase::from_current_hour(config, 0.0 / 24.0),
+            DayPhase::Dusk(_)
+        ));
+    }
+}
