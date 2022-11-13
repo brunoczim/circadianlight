@@ -1,9 +1,0 @@
-[package]
-name = "libcircadian"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-structopt = "0.3"
-chrono = "0.4"
-signal-hook = "0.3"
