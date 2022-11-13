@@ -1,6 +1,6 @@
 use std::{io, thread, time::Duration};
 
-use chrono::{DateTime, FixedOffset, Local};
+use chrono::{Local, NaiveTime};
 use structopt::StructOpt;
 
 use crate::{
@@ -28,7 +28,7 @@ pub struct ConfigArgs {
     max_red: f64,
     #[structopt(long = "--min-green")]
     #[structopt(short = "-g")]
-    #[structopt(default_value = "0.7")]
+    #[structopt(default_value = "0.65")]
     min_green: f64,
     #[structopt(long = "--max-green")]
     #[structopt(short = "-G")]
@@ -36,7 +36,7 @@ pub struct ConfigArgs {
     max_green: f64,
     #[structopt(long = "--min-blue")]
     #[structopt(short = "-b")]
-    #[structopt(default_value = "0.5")]
+    #[structopt(default_value = "0.45")]
     min_blue: f64,
     #[structopt(long = "--max-blue")]
     #[structopt(short = "-B")]
@@ -44,19 +44,19 @@ pub struct ConfigArgs {
     max_blue: f64,
     #[structopt(long = "--day-start")]
     #[structopt(short = "-d")]
-    #[structopt(default_value = "5:00")]
-    #[structopt(parse(try_from_str= parse_time_arg))]
-    day_start: DateTime<FixedOffset>,
+    #[structopt(default_value = "05:00")]
+    #[structopt(parse(try_from_str = parse_time_arg))]
+    day_start: NaiveTime,
     #[structopt(long = "--dusk-start")]
     #[structopt(short = "-D")]
     #[structopt(default_value = "17:00")]
-    #[structopt(parse(try_from_str= parse_time_arg))]
-    dusk_start: DateTime<FixedOffset>,
+    #[structopt(parse(try_from_str = parse_time_arg))]
+    dusk_start: NaiveTime,
     #[structopt(long = "--night-start")]
     #[structopt(short = "-n")]
     #[structopt(default_value = "21:00")]
-    #[structopt(parse(try_from_str= parse_time_arg))]
-    night_start: DateTime<FixedOffset>,
+    #[structopt(parse(try_from_str = parse_time_arg))]
+    night_start: NaiveTime,
 }
 
 impl ConfigArgs {
@@ -200,7 +200,7 @@ pub struct PrintSubCommand {
     #[structopt(long = "--time")]
     #[structopt(short = "-t")]
     #[structopt(parse(try_from_str = parse_time_arg))]
-    time: Option<DateTime<FixedOffset>>,
+    time: Option<NaiveTime>,
     #[structopt(flatten)]
     config_args: ConfigArgs,
 }
@@ -236,7 +236,7 @@ pub struct ApplySubCommand {
     #[structopt(long = "--time")]
     #[structopt(short = "-t")]
     #[structopt(parse(try_from_str = parse_time_arg))]
-    time: Option<DateTime<FixedOffset>>,
+    time: Option<NaiveTime>,
     #[structopt(long = "--monitors")]
     #[structopt(short = "-m")]
     monitors: Option<Vec<String>>,
@@ -266,16 +266,11 @@ impl GraphicalEnvContext for ApplySubCommand {
     }
 }
 
-fn parse_time_arg(
-    arg: &str,
-) -> chrono::format::ParseResult<DateTime<FixedOffset>> {
-    DateTime::parse_from_str(arg, "%H:%M")
+fn parse_time_arg(arg: &str) -> chrono::format::ParseResult<NaiveTime> {
+    NaiveTime::parse_from_str(arg, "%H:%M")
 }
 
-pub fn channels_from_time(
-    config: Config,
-    time: Option<DateTime<FixedOffset>>,
-) -> [f64; 3] {
+pub fn channels_from_time(config: Config, time: Option<NaiveTime>) -> [f64; 3] {
     let hours = match time {
         Some(offset) => timelike_to_hours(&offset),
         None => timelike_to_hours(&Local::now()),

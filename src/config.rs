@@ -185,8 +185,8 @@ impl Default for Config {
             hours: HourConfig::default(),
             channels: [
                 ChannelConfig { min: 1.0, max: 1.0 },
-                ChannelConfig { min: 0.8, max: 1.0 },
-                ChannelConfig { min: 0.6, max: 1.0 },
+                ChannelConfig { min: 0.65, max: 1.0 },
+                ChannelConfig { min: 0.45, max: 1.0 },
             ],
         }
     }
