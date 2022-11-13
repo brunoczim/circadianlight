@@ -101,12 +101,6 @@ pub struct Program {
     subcommand: SubCommand,
 }
 
-impl Program {
-    pub fn parse() -> Self {
-        Self::from_args()
-    }
-}
-
 impl GraphicalEnvContext for Program {
     type Output = ();
 
@@ -180,7 +174,7 @@ impl GraphicalEnvContext for DaemonSubCommand {
     {
         let config = self.config_args.create_config()?;
         loop {
-            let gamma = channels_from_time(config, None);
+            let gamma = create_color_channels(config, None);
             match &self.monitors {
                 Some(monitors) => {
                     graphical_env.apply_gamma(gamma, monitors)?;
@@ -213,14 +207,14 @@ impl GraphicalEnvContext for PrintSubCommand {
         G: GraphicalEnv,
     {
         let config = self.config_args.create_config()?;
-        let gamma = channels_from_time(config, self.time);
+        let gamma = create_color_channels(config, self.time);
         println!("{}", graphical_env.format_gamma(gamma)?);
         Ok(())
     }
 
     fn without_graphical_env(self) -> io::Result<Self::Output> {
         let config = self.config_args.create_config()?;
-        let gamma = channels_from_time(config, self.time);
+        let gamma = create_color_channels(config, self.time);
         println!(
             "red={:.3} green={:.3} blue={:.3}",
             gamma[channel::RED],
@@ -252,7 +246,7 @@ impl GraphicalEnvContext for ApplySubCommand {
         G: GraphicalEnv,
     {
         let config = self.config_args.create_config()?;
-        let gamma = channels_from_time(config, self.time);
+        let gamma = create_color_channels(config, self.time);
         match self.monitors {
             Some(monitors) => {
                 graphical_env.apply_gamma(gamma, monitors)?;
@@ -270,7 +264,7 @@ fn parse_time_arg(arg: &str) -> chrono::format::ParseResult<NaiveTime> {
     NaiveTime::parse_from_str(arg, "%H:%M")
 }
 
-pub fn channels_from_time(config: Config, time: Option<NaiveTime>) -> [f64; 3] {
+fn create_color_channels(config: Config, time: Option<NaiveTime>) -> [f64; 3] {
     let hours = match time {
         Some(offset) => timelike_to_hours(&offset),
         None => timelike_to_hours(&Local::now()),
