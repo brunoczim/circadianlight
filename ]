@@ -59,14 +59,14 @@ mod test {
         let channel = linear_channel_function(
             ChannelConfig::new(1.0, 1.0).unwrap(),
             HourConfig::default(),
-            9.0 / 24.0,
+            1.0 / 24.0,
         );
         assert!((channel - 1.0).abs() < EPSILON);
 
         let channel = linear_channel_function(
             ChannelConfig::new(0.8, 1.0).unwrap(),
             HourConfig::default(),
-            9.0 / 24.0,
+            1.0 / 24.0,
         );
         assert!((channel - 1.0).abs() < EPSILON);
     }
