@@ -58,6 +58,21 @@ impl Default for HourConfig {
 }
 
 impl HourConfig {
+    pub fn new(
+        day_start: f64,
+        dusk_start: f64,
+        night_start: f64,
+    ) -> Result<Self, InvalidDayPhases> {
+        if day_start <= dusk_start && dusk_start <= night_start
+            || night_start <= day_start && day_start <= dusk_start
+            || dusk_start <= night_start && night_start <= day_start
+        {
+            Ok(Self { day_start, dusk_start, night_start })
+        } else {
+            Err(InvalidDayPhases { day_start, dusk_start, night_start })
+        }
+    }
+
     pub fn day_start(self) -> f64 {
         self.day_start
     }
@@ -68,64 +83,6 @@ impl HourConfig {
 
     pub fn night_start(self) -> f64 {
         self.night_start
-    }
-
-    pub fn with_day_start(
-        self,
-        day_start: f64,
-    ) -> Result<Self, InvalidDayPhases> {
-        if day_start <= self.dusk_start && self.dusk_start <= self.night_start
-            || self.night_start <= day_start && day_start <= self.dusk_start
-            || self.dusk_start <= self.night_start
-                && self.night_start <= day_start
-        {
-            Ok(Self { day_start, ..self })
-        } else {
-            Err(InvalidDayPhases {
-                day_start,
-                dusk_start: self.dusk_start,
-                night_start: self.night_start,
-            })
-        }
-    }
-
-    pub fn with_dusk_start(
-        self,
-        dusk_start: f64,
-    ) -> Result<HourConfig, InvalidDayPhases> {
-        if self.day_start <= dusk_start && dusk_start <= self.night_start
-            || self.night_start <= self.day_start
-                && self.day_start <= dusk_start
-            || dusk_start <= self.night_start
-                && self.night_start <= self.day_start
-        {
-            Ok(Self { dusk_start, ..self })
-        } else {
-            Err(InvalidDayPhases {
-                day_start: self.day_start,
-                dusk_start,
-                night_start: self.night_start,
-            })
-        }
-    }
-
-    pub fn with_night_start(
-        self,
-        night_start: f64,
-    ) -> Result<HourConfig, InvalidDayPhases> {
-        if self.day_start <= self.dusk_start && self.dusk_start <= night_start
-            || night_start <= self.day_start
-                && self.day_start <= self.dusk_start
-            || self.dusk_start <= night_start && night_start <= self.day_start
-        {
-            Ok(Self { night_start, ..self })
-        } else {
-            Err(InvalidDayPhases {
-                day_start: self.day_start,
-                dusk_start: self.dusk_start,
-                night_start,
-            })
-        }
     }
 }
 
@@ -142,25 +99,14 @@ impl Default for ChannelConfig {
 }
 
 impl ChannelConfig {
-    pub fn with_min(
-        self,
+    pub fn new(
         min: f64,
-    ) -> Result<ChannelConfig, InvalidChannelBounds> {
-        if min <= self.max {
-            Ok(Self { min, ..self })
-        } else {
-            Err(InvalidChannelBounds { min, max: self.max })
-        }
-    }
-
-    pub fn with_max(
-        self,
         max: f64,
     ) -> Result<ChannelConfig, InvalidChannelBounds> {
-        if self.min <= max {
-            Ok(Self { max, ..self })
+        if min <= max {
+            Ok(Self { min, max })
         } else {
-            Err(InvalidChannelBounds { min: self.min, max })
+            Err(InvalidChannelBounds { min, max })
         }
     }
 
@@ -189,5 +135,35 @@ impl Default for Config {
                 ChannelConfig { min: 0.45, max: 1.0 },
             ],
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{ChannelConfig, HourConfig};
+
+    #[test]
+    fn error_when_day_phase_cycle_is_invalid() {
+        HourConfig::new(0.5, 0.1, 0.7).unwrap_err();
+        HourConfig::new(0.1, 0.7, 0.5).unwrap_err();
+        HourConfig::new(0.7, 0.5, 0.1).unwrap_err();
+    }
+
+    #[test]
+    fn ok_when_day_phase_cycle_is_valid() {
+        HourConfig::new(0.1, 0.5, 0.7).unwrap();
+        HourConfig::new(0.5, 0.7, 0.1).unwrap();
+        HourConfig::new(0.7, 0.1, 0.5).unwrap();
+    }
+
+    #[test]
+    fn error_when_channel_bounds_are_invalid() {
+        ChannelConfig::new(0.9, 0.1).unwrap_err();
+    }
+
+    #[test]
+    fn ok_when_channel_bounds_are_valid() {
+        ChannelConfig::new(0.1, 0.9).unwrap();
+        ChannelConfig::new(1.0, 1.0).unwrap();
     }
 }

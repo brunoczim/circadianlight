@@ -61,25 +61,20 @@ pub struct ConfigArgs {
 
 impl ConfigArgs {
     pub fn create_hour_config(&self) -> Result<HourConfig, InvalidDayPhases> {
-        HourConfig::default()
-            .with_day_start(timelike_to_hours(&self.day_start))?
-            .with_dusk_start(timelike_to_hours(&self.dusk_start))?
-            .with_night_start(timelike_to_hours(&self.night_start))
+        HourConfig::new(
+            timelike_to_hours(&self.day_start),
+            timelike_to_hours(&self.dusk_start),
+            timelike_to_hours(&self.night_start),
+        )
     }
 
     pub fn create_channels_config(
         &self,
     ) -> Result<[ChannelConfig; 3], InvalidChannelBounds> {
         Ok([
-            ChannelConfig::default()
-                .with_min(self.min_red)?
-                .with_max(self.max_red)?,
-            ChannelConfig::default()
-                .with_min(self.min_green)?
-                .with_max(self.max_green)?,
-            ChannelConfig::default()
-                .with_min(self.min_blue)?
-                .with_max(self.max_blue)?,
+            ChannelConfig::new(self.min_red, self.max_red)?,
+            ChannelConfig::new(self.min_green, self.max_green)?,
+            ChannelConfig::new(self.min_blue, self.max_blue)?,
         ])
     }
 
