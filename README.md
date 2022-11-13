@@ -20,11 +20,10 @@ slowly make the colors contain more red than green or blue. And during the
 
 ## How To Use It
 
-The program can be used as a daemon, which can be managed by `systemd`, but it
-can also be used as a single shot apply of the gamma color spectrum to your
-screen. Also, it can be simply used to print the gamma color spectrum (without
-applying it) for the current day hour (or a given hour), even though you're not
-on Linux.
+The program can be used as a service and can be managed by `systemd`, but it
+can also apply the gamma color spectrum to your screen one time. Also, it can be
+simply used to print the gamma color spectrum (without applying it) for the
+current day hour (or a given hour), even though you're not on Linux.
 
 The program can be configured, please run `circadianlight --help`.
 

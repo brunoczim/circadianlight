@@ -135,8 +135,8 @@ impl GraphicalEnvContext for Program {
 /// Subcommand required to run circadianlight.
 #[derive(Debug, Clone, StructOpt)]
 pub enum SubCommand {
-    /// Run it as a daemon from minute to minute or in the desired interval.
-    Daemon(DaemonSubCommand),
+    /// Run it as a service from minute to minute or in the desired interval.
+    Serve(ServeSubCommand),
     /// Just prints the color spectrum for the current hour (or the given
     /// hour).
     Print(PrintSubCommand),
@@ -153,7 +153,7 @@ impl GraphicalEnvContext for SubCommand {
         G: GraphicalEnv,
     {
         match self {
-            Self::Daemon(subcommand) => {
+            Self::Serve(subcommand) => {
                 subcommand.with_graphical_env(graphical_env)
             },
             Self::Print(subcommand) => {
@@ -167,16 +167,16 @@ impl GraphicalEnvContext for SubCommand {
 
     fn without_graphical_env(self) -> io::Result<Self::Output> {
         match self {
-            Self::Daemon(subcommand) => subcommand.without_graphical_env(),
+            Self::Serve(subcommand) => subcommand.without_graphical_env(),
             Self::Print(subcommand) => subcommand.without_graphical_env(),
             Self::Apply(subcommand) => subcommand.without_graphical_env(),
         }
     }
 }
 
-/// Run it as a daemon from minute to minute or in the desired interval.
+/// Run it as a service, running minute to minute or in the desired interval.
 #[derive(Debug, Clone, StructOpt)]
-pub struct DaemonSubCommand {
+pub struct ServeSubCommand {
     /// Seconds to wait beetween every update to screen colors.
     #[structopt(long = "--sleep-seconds")]
     #[structopt(short = "-s")]
@@ -193,7 +193,7 @@ pub struct DaemonSubCommand {
     config_args: ConfigArgs,
 }
 
-impl GraphicalEnvContext for DaemonSubCommand {
+impl GraphicalEnvContext for ServeSubCommand {
     type Output = ();
 
     fn with_graphical_env<G>(self, graphical_env: G) -> io::Result<Self::Output>
