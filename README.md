@@ -31,6 +31,9 @@ The program can be configured, please run `circadianlight --help`.
 
 ### On Linux, With Systemd
 
+Before installing, you may want to customize the systemd unit file, namely
+`circadianlight.service`, especially you might want to change CLI arguments.
+
 To install it on linux, targeting X and systemd, simply run:
 
 ```sh

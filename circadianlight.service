@@ -5,4 +5,4 @@ Description=Circadian Light
 ExecStart=%h/.cargo/bin/circadianlight serve
 
 [Install]
-WantedBy=graphical.target
+WantedBy=default.target
