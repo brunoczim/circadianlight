@@ -1,8 +1,0 @@
-[Unit]
-Description=Circadian Light
-
-[Service]
-ExecStart=%h/.cargo/bin/circadianlight serve
-
-[Install]
-WantedBy=default.target

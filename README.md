@@ -20,35 +20,16 @@ slowly make the colors contain more red than green or blue. And during the
 
 ## How To Use It
 
-The program can be used as a service and can be managed by `systemd`, but it
-can also apply the gamma color spectrum to your screen one time. Also, it can be
-simply used to print the gamma color spectrum (without applying it) for the
-current day hour (or a given hour), even though you're not on Linux.
+The program can be used as a service applying color correction every `X`
+seconds, but can be used to apply it once as well.
+Also, it can be used to simply print the gamma color spectrum (without applying
+it) for the current day hour (or a given hour), even though you're not on Linux.
 
 The program can be configured, please run `circadianlight --help`.
 
 ## How To Install/Uninstall 
 
-### On Linux, With Systemd
-
-Before installing, you may want to customize the systemd unit file, namely
-`circadianlight.service`, especially you might want to change CLI arguments.
-
-To install it on linux, targeting X and systemd, simply run:
-
-```sh
-make install
-```
-
-To uninstall:
-
-```sh
-make uninstall
-```
-
-### Other Platforms (Including Linux Without Systemd)
-
-This can be simply a cargo install:
+This is just a cargo install:
 ```sh
 cargo install --path .
 ```
