@@ -34,7 +34,7 @@ pub struct ConfigArgs {
     /// Minimum green channel value, in the interval `[0,1]`.
     #[structopt(long = "--min-green")]
     #[structopt(short = "-g")]
-    #[structopt(default_value = "0.65")]
+    #[structopt(default_value = "0.6")]
     min_green: f64,
     /// Maximum green channel value, in the interval `[0,1]`.
     #[structopt(long = "--max-green")]
@@ -44,7 +44,7 @@ pub struct ConfigArgs {
     /// Minimum blue channel value, in the interval `[0,1]`.
     #[structopt(long = "--min-blue")]
     #[structopt(short = "-b")]
-    #[structopt(default_value = "0.45")]
+    #[structopt(default_value = "0.3")]
     min_blue: f64,
     /// Maximum blue channel value, in the interval `[0,1]`.
     #[structopt(long = "--max-blue")]
